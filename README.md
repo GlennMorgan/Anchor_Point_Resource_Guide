@@ -1,3 +1,3 @@
-Anchor Point Resource Portal V1.8
+Anchor Point Resource Portal v1.9
 
-Fixes tray hide/show behavior and labels the Command page version.
+Static GitHub Pages resource portal. Manual searches use strict all-keyword matching. Quoted searches use exact phrase matching.

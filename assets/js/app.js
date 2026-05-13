@@ -1,8 +1,9 @@
-const DATA_URL = 'data/resources.json?v=1.8';
-const META_URL = 'data/resources_metadata.json?v=1.8';
-const STORE = 'anchorPoint.selected.v18';
+const DATA_URL = 'data/resources.json?v=1.9';
+const META_URL = 'data/resources_metadata.json?v=1.9';
+const STORE = 'anchorPoint.selected.v19';
 const LEGACY_STORES = [
   'anchorPoint.selected',
+  'anchorPoint.selected.v18',
   'anchorPoint.selected.v17',
   'anchorPoint.selected.v16',
   'anchorPoint.selected.v14',
@@ -43,8 +44,8 @@ function clearSelectionStorage(){
 let selected = new Set(readSelectedIds());
 let showingSelectedOnly = false;
 let activeWorkflow = '';
-let viewMode = localStorage.getItem('anchorPoint.viewMode.v18') || 'cards';
-let sortMode = localStorage.getItem('anchorPoint.sortMode.v18') || 'urgency';
+let viewMode = localStorage.getItem('anchorPoint.viewMode.v19') || 'cards';
+let sortMode = localStorage.getItem('anchorPoint.sortMode.v19') || 'urgency';
 const page = document.body.dataset.page || 'home';
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -54,6 +55,93 @@ const uniq = (arr) => [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeComp
 const esc = (s) => txt(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const field = (r, k) => txt(r[k]);
 const allText = (r) => [r.category,r.serviceFunction,r.organization,r.phoneText,r.urgency,r.population,r.descriptionOfServices,r.location,r.hours,r.website,r.email,r.notes].map(txt).join(' ').toLowerCase();
+const SEARCH_FIELDS = [
+  ['organization','Organization'],
+  ['serviceFunction','Service Function'],
+  ['category','Category'],
+  ['descriptionOfServices','Description'],
+  ['notes','Notes'],
+  ['location','Location'],
+  ['population','Population'],
+  ['phoneText','Phone'],
+  ['hours','Hours'],
+  ['website','Website'],
+  ['email','Email'],
+  ['urgency','Urgency']
+];
+function normalizeForSearch(v){
+  return txt(v)
+    .toLowerCase()
+    .replace(/non[-\s]?crisis/g,'noncrisis')
+    .replace(/[’']/g,'')
+    .replace(/[^a-z0-9]+/g,' ')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+function searchBlob(r){
+  return SEARCH_FIELDS.map(([k])=>normalizeForSearch(r[k])).join(' ').replace(/\s+/g,' ').trim();
+}
+function parseKeywordQuery(q){
+  const raw = txt(q);
+  const quoted = raw.match(/^["“](.+?)["”]$/);
+  if(quoted){
+    const phrase = normalizeForSearch(quoted[1]);
+    return {mode:'phrase', phrase, tokens: phrase ? phrase.split(' ') : []};
+  }
+  const tokens = normalizeForSearch(raw).split(' ').filter(Boolean);
+  return {mode:'and', phrase:'', tokens};
+}
+function containsToken(blob, token){
+  if(!token) return true;
+  return new RegExp('(^|\\s)'+token.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(\\s|$)').test(blob);
+}
+function queryMatchesBlob(blob, parsed){
+  if(!parsed || (!parsed.phrase && !parsed.tokens?.length)) return true;
+  if(parsed.mode === 'phrase') return blob.includes(parsed.phrase);
+  return parsed.tokens.every(t=>containsToken(blob,t));
+}
+function keywordMatch(r, kw){
+  if(!kw) return true;
+  return queryMatchesBlob(searchBlob(r), parseKeywordQuery(kw));
+}
+function matchReasons(r, kw){
+  if(!kw) return [];
+  const parsed = parseKeywordQuery(kw);
+  const reasons = [];
+  for(const [k,label] of SEARCH_FIELDS){
+    const value = normalizeForSearch(r[k]);
+    if(value && queryMatchesBlob(value, parsed)) reasons.push(label);
+  }
+  return reasons.slice(0,4);
+}
+
+function searchRelevanceScore(r, kw){
+  if(!kw) return 0;
+  const parsed = parseKeywordQuery(kw);
+  const phrase = parsed.mode === 'phrase' ? parsed.phrase : parsed.tokens.join(' ');
+  const org = normalizeForSearch(r.organization);
+  const svc = normalizeForSearch(r.serviceFunction);
+  const cat = normalizeForSearch(r.category);
+  const desc = normalizeForSearch(r.descriptionOfServices);
+  const notes = normalizeForSearch(r.notes);
+  const blob = searchBlob(r);
+  let score = 0;
+  if(phrase && org.includes(phrase)) score += 120;
+  if(phrase && svc.includes(phrase)) score += 90;
+  if(phrase && cat.includes(phrase)) score += 50;
+  if(phrase && desc.includes(phrase)) score += 40;
+  if(phrase && notes.includes(phrase)) score += 35;
+  if(parsed.tokens?.length){
+    for(const t of parsed.tokens){
+      if(containsToken(org,t)) score += 15;
+      if(containsToken(svc,t)) score += 10;
+      if(containsToken(cat,t)) score += 5;
+    }
+  }
+  if(queryMatchesBlob(blob, parsed)) score += 5;
+  return score;
+}
+
 const workflows = {
   food: {label:'Food / EBT', terms:['food','calfresh','ebt','snap','pantry','meal','meals','nutrition','grocery','groceries','hunger']},
   housing: {label:'Housing / Shelter', terms:['housing','shelter','homeless','homelessness','outreach','coordinated entry','emergency housing','transitional','motel','rental']},
@@ -133,7 +221,7 @@ function setTrayCollapsed(collapsed){
   }else if(floating){
     floating.style.display = 'none';
   }
-  try{ sessionStorage.setItem('anchorPoint.trayCollapsed.v18', collapsed ? '1' : '0'); }catch(e){}
+  try{ sessionStorage.setItem('anchorPoint.trayCollapsed.v19', collapsed ? '1' : '0'); }catch(e){}
 }
 function toggleTrayCollapsed(){
   const app = document.querySelector('.app');
@@ -145,7 +233,14 @@ function wireCommon(){
   $$('[id="printGuideBtn"], [id="printGuideBtn2"]').forEach(b=>b.addEventListener('click',printGuide));
   const tray=$('guideTray'); if($('trayToggle')) $('trayToggle').addEventListener('click',()=>tray.classList.toggle('open'));
   $$('[id="trayHideBtn"], [id="trayCollapseBtn"]').forEach(b=>b.addEventListener('click', toggleTrayCollapsed));
-  try{ if(sessionStorage.getItem('anchorPoint.trayCollapsed.v18') === '1') setTrayCollapsed(true); }catch(e){}
+  try{
+    const storedTray = sessionStorage.getItem('anchorPoint.trayCollapsed.v19');
+    if(page === 'resources'){
+      setTrayCollapsed(storedTray === null ? true : storedTray === '1');
+    }else if(storedTray === '1'){
+      setTrayCollapsed(true);
+    }
+  }catch(e){}
 }
 function initHome(){ const form=$('homeSearchForm'); if(form) form.addEventListener('submit',e=>{e.preventDefault(); location.href='resources.html?q='+encodeURIComponent($('homeSearch').value||'');}); }
 function initResources(){
@@ -156,13 +251,12 @@ function initResources(){
   if($('searchForm')) $('searchForm').addEventListener('submit',e=>{e.preventDefault(); activeWorkflow=''; $('keyword').value=$('q').value; renderResults();});
   if($('clearFilters')) $('clearFilters').addEventListener('click',()=>{['keyword','category','urgency','population','location','q'].forEach(id=>{if($(id)) $(id).value='';}); showingSelectedOnly=false; activeWorkflow=''; renderResults();});
   if($('showSelectedBtn')) $('showSelectedBtn').addEventListener('click',()=>{showingSelectedOnly=!showingSelectedOnly; $('showSelectedBtn').textContent=showingSelectedOnly?'Show All':'Show Selected'; renderResults();});
-  if($('viewMode')) $('viewMode').addEventListener('change',e=>{viewMode=e.target.value; localStorage.setItem('anchorPoint.viewMode.v18',viewMode); renderResults();});
-  if($('sortMode')) $('sortMode').addEventListener('change',e=>{sortMode=e.target.value; localStorage.setItem('anchorPoint.sortMode.v18',sortMode); renderResults();});
+  if($('viewMode')) $('viewMode').addEventListener('change',e=>{viewMode=e.target.value; localStorage.setItem('anchorPoint.viewMode.v19',viewMode); renderResults();});
+  if($('sortMode')) $('sortMode').addEventListener('change',e=>{sortMode=e.target.value; localStorage.setItem('anchorPoint.sortMode.v19',sortMode); renderResults();});
   renderResults();
 }
 function getFilters(){return {kw:low($('keyword')?.value||$('q')?.value),cat:txt($('category')?.value),urg:txt($('urgency')?.value),pop:txt($('population')?.value),loc:low($('location')?.value)};}
 function workflowMatch(r){if(!activeWorkflow || !workflows[activeWorkflow]) return true; const blob=allText(r); return workflows[activeWorkflow].terms.some(t=>blob.includes(t));}
-function keywordMatch(r, kw){ if(!kw) return true; const terms=kw.split(/\s+/).filter(Boolean); const blob=allText(r); return terms.every(t=>blob.includes(t)); }
 function filteredResources(){const f=getFilters(); let rows=resources.filter(r=>{
   if(showingSelectedOnly && !selected.has(r.id)) return false;
   if(!workflowMatch(r)) return false;
@@ -172,12 +266,55 @@ function filteredResources(){const f=getFilters(); let rows=resources.filter(r=>
   if(f.pop && !popTags(r).includes(f.pop)) return false;
   if(f.loc && !low(r.location).includes(f.loc) && !low(r.notes).includes(f.loc)) return false;
   return true; });
-  rows.sort((a,b)=>{ if(sortMode==='name') return field(a,'organization').localeCompare(field(b,'organization')); if(sortMode==='category') return field(a,'category').localeCompare(field(b,'category')) || urgencyPriority(a)-urgencyPriority(b); if(sortMode==='verified') return field(b,'auditDate').localeCompare(field(a,'auditDate')); return urgencyPriority(a)-urgencyPriority(b) || field(a,'organization').localeCompare(field(b,'organization')); });
+  rows.sort((a,b)=>{
+    if(f.kw){
+      const rb = searchRelevanceScore(b,f.kw) - searchRelevanceScore(a,f.kw);
+      if(rb) return rb;
+    }
+    if(sortMode==='name') return field(a,'organization').localeCompare(field(b,'organization'));
+    if(sortMode==='category') return field(a,'category').localeCompare(field(b,'category')) || urgencyPriority(a)-urgencyPriority(b);
+    if(sortMode==='verified') return field(b,'auditDate').localeCompare(field(a,'auditDate'));
+    return urgencyPriority(a)-urgencyPriority(b) || field(a,'organization').localeCompare(field(b,'organization'));
+  });
   return rows;
 }
-function renderResults(){const rows=filteredResources(); const out=$('results'); if(!out) return; out.classList.toggle('list-view', viewMode==='list'); if($('resultCount')) $('resultCount').textContent=rows.length.toLocaleString()+' resources'; const summary=[]; const f=getFilters(); if(activeWorkflow && workflows[activeWorkflow]) summary.push('Workflow: '+workflows[activeWorkflow].label); if(f.kw) summary.push('keyword'); if(f.cat) summary.push(f.cat); if(f.urg) summary.push(f.urg); if(f.pop) summary.push(f.pop); if(f.loc) summary.push('location'); if(showingSelectedOnly) summary.push('selected only'); if($('filterSummary')) $('filterSummary').textContent=summary.length?' · '+summary.join(' · '):''; renderWorkflowContext(); if(!rows.length){out.innerHTML='<div class="empty">No resources matched those filters. Try Clear, or use a broader workflow from the Command page.</div>'; return;} out.innerHTML=rows.slice(0,220).map(cardHTML).join('') + (rows.length>220?`<div class="empty">Showing first 220 of ${rows.length.toLocaleString()} matches. Narrow the search to reduce results.</div>`:''); wireCards();}
+function renderResults(){
+  const rows=filteredResources();
+  const out=$('results');
+  if(!out) return;
+  out.classList.toggle('list-view', viewMode==='list');
+  if($('resultCount')) $('resultCount').textContent=rows.length.toLocaleString()+' resources';
+  const summary=[];
+  const f=getFilters();
+  if(activeWorkflow && workflows[activeWorkflow]) summary.push('Workflow: '+workflows[activeWorkflow].label);
+  if(f.kw){
+    const parsed=parseKeywordQuery(f.kw);
+    summary.push(parsed.mode==='phrase' ? 'exact phrase' : 'all keywords');
+  }
+  if(f.cat) summary.push(f.cat);
+  if(f.urg) summary.push(f.urg);
+  if(f.pop) summary.push(f.pop);
+  if(f.loc) summary.push('location');
+  if(showingSelectedOnly) summary.push('selected only');
+  if($('filterSummary')) $('filterSummary').textContent=summary.length?' · '+summary.join(' · '):'';
+  if($('selectedInlineCount')) $('selectedInlineCount').textContent=selected.size;
+  renderWorkflowContext();
+  if(!rows.length){
+    out.innerHTML='<div class="empty">No resources matched those filters. Try Clear Search, remove filters, or use a workflow from the Command page.</div>';
+    return;
+  }
+  out.innerHTML=rows.slice(0,220).map(cardHTML).join('') + (rows.length>220?`<div class="empty">Showing first 220 of ${rows.length.toLocaleString()} matches. Narrow the search to reduce results.</div>`:'');
+  wireCards();
+}
 function renderWorkflowContext(){const el=$('activeWorkflow'); if(!el) return; if(activeWorkflow && workflows[activeWorkflow]){const w=workflows[activeWorkflow]; el.innerHTML=`<strong>${esc(w.label)}</strong><span>Matched terms: ${esc(w.terms.join(', '))}</span><button class="mini-btn" id="clearWorkflowBtn" type="button">Clear workflow</button>`; el.classList.add('show'); $('clearWorkflowBtn')?.addEventListener('click',()=>{activeWorkflow=''; renderResults();});} else {el.innerHTML=''; el.classList.remove('show');}}
-function cardHTML(r){const sel=selected.has(r.id); const url=field(r,'website'); return `<article class="resource-card ${sel?'selected':''}" data-id="${esc(r.id)}"><div class="card-top"><div><h3>${esc(r.organization||'Unnamed Resource')}</h3><div class="service">${esc(r.serviceFunction||r.category||'Resource')}</div></div>${statusHTML(r)}</div><p class="desc">${esc(r.descriptionOfServices||r.notes||'No service description available.')}</p><div class="chips"><span class="chip">${esc(r.category||'Category')}</span>${r.auditDate?`<span class="chip verified">Verified ${esc(r.auditDate)}</span>`:''}</div><div class="info"><div><b>Phone</b><br>${esc(r.phoneText||'Not listed')}</div><div><b>Hours</b><br>${esc(r.hours||'Not listed')}</div><div><b>Location</b><br>${esc(r.location||'Not listed')}</div><div><b>Population</b><br>${esc(r.population||'Not listed')}</div></div><div class="card-actions"><button class="mini-btn primary add-btn">${sel?'Added ✓':'Add to Guide'}</button><button class="mini-btn copy-one">Copy</button>${url?`<a class="mini-btn" href="${esc(url)}" target="_blank" rel="noopener">Open</a>`:''}</div></article>`;}
+function cardHTML(r){
+  const sel=selected.has(r.id);
+  const url=field(r,'website');
+  const f=getFilters();
+  const reasons=f.kw ? matchReasons(r,f.kw) : [];
+  const matched=reasons.length ? `<div class="matched">Matched: ${esc(reasons.join(', '))}</div>` : '';
+  return `<article class="resource-card ${sel?'selected':''}" data-id="${esc(r.id)}"><div class="card-top"><div><h3>${esc(r.organization||'Unnamed Resource')}</h3><div class="service">${esc(r.serviceFunction||r.category||'Resource')}</div></div>${statusHTML(r)}</div><p class="desc">${esc(r.descriptionOfServices||r.notes||'No service description available.')}</p>${matched}<div class="chips"><span class="chip">${esc(r.category||'Category')}</span>${r.auditDate?`<span class="chip verified">Verified ${esc(r.auditDate)}</span>`:''}</div><div class="info"><div><b>Phone</b><br>${esc(r.phoneText||'Not listed')}</div><div><b>Hours</b><br>${esc(r.hours||'Not listed')}</div><div><b>Location</b><br>${esc(r.location||'Not listed')}</div><div><b>Population</b><br>${esc(r.population||'Not listed')}</div></div><div class="card-actions"><button class="mini-btn primary add-btn">${sel?'Added ✓':'Add to Guide'}</button><button class="mini-btn copy-one">Copy</button>${url?`<a class="mini-btn" href="${esc(url)}" target="_blank" rel="noopener">Open</a>`:''}</div></article>`;
+}
 function wireCards(){ $$('.resource-card').forEach(card=>{const id=card.dataset.id; card.querySelector('.add-btn')?.addEventListener('click',()=>toggle(id)); card.querySelector('.copy-one')?.addEventListener('click',()=>copyText(resourcePlain(recordById(id))));}); }
 function toggle(id){ if(selected.has(id)){selected.delete(id); toast('Removed from guide.');} else {selected.add(id); toast('Added to guide.');} save(); if(page==='resources') renderResults(); if(page==='guide') renderMatches(); }
 function renderSelected(){const list=$('selectedList'); if(!list) return; const rows=[...selected].map(recordById).filter(Boolean); if(!rows.length){list.innerHTML='<div class="empty">No resources selected yet.</div>'; return;} list.innerHTML=rows.map((r,i)=>`<div class="guide-item"><div><strong>${i+1}. ${esc(r.organization)}</strong><small>${esc(r.serviceFunction)} · ${esc(r.phoneText||'No phone')}</small><small>${esc(urgencyShort(r.urgency))} · ${esc(r.location||'No location')}</small></div><button class="mini-btn danger" title="Remove" data-remove="${esc(r.id)}">×</button></div>`).join(''); $$('[data-remove]').forEach(b=>b.addEventListener('click',()=>toggle(b.dataset.remove)));}

@@ -5,6 +5,7 @@
   "generatedAt": "2026-05-13T06:00:00Z",
   "source": "Corrected Summary Tab JSON",
   "notes": "Poly-inspired command-center UI with Anchor Point imagery. Static GitHub Pages site. No caller data is stored.",
-  "siteVersion": "1.4",
-  "uiNotes": "Three-column app shell, compact workflow presets, stable urgency badges, sort/view controls."
+  "siteVersion": "1.9",
+  "uiNotes": "Three-column app shell, compact workflow presets, stable urgency badges, sort/view controls.",
+  "releaseNotes": "Strict manual search, exact phrase support, clear search helper, selected count, Search page guide tray collapsed by default."
 }

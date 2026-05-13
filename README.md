@@ -1,29 +1,15 @@
-# Anchor Point Resource Portal - V1.3 Anchor UI
+# Anchor Point Resource Portal v1.4
 
-Static GitHub Pages resource portal using the corrected Summary Tab JSON and Anchor Point visual system.
+Static GitHub Pages site for the Anchor Point call center resource guide.
 
-## What changed in V1.3
+## v1.4 updates
+- True three-column app shell so the Guide Tray no longer covers resource cards.
+- Redesigned urgency badges with compact labels and clean metadata.
+- Workflow buttons now use preset term groups instead of literal keyword searches.
+- Added active workflow context label.
+- Added sort controls and card/list view toggle.
+- Added clearer selected-resource feedback and compact tray rows.
+- Retains dense print output and corrected 1,988-record JSON.
 
-- Rebuilt the UI as a true command-center app shell.
-- Added Anchor Point themed imagery to `assets/img/`.
-- Added cache-busting query strings for CSS and JS.
-- Made search, filters, selected guide tray, and guide builder more compact.
-- Reworked print output into a dense table layout for multi-resource handouts.
-- Kept all logic client-side. No caller data is stored.
-
-## Files
-
-- `index.html` - command center home
-- `resources.html` - searchable resource browser
-- `guide.html` - caller guide builder
-- `data/resources.json` - corrected resource data
-- `data/resources_metadata.json` - metadata
-- `assets/css/styles.css` - Anchor UI styling
-- `assets/js/app.js` - client-side search, filters, selection, guide and print logic
-- `assets/img/` - Anchor Point themed visual assets
-
-## GitHub Pages
-
-Upload the contents of this folder to the repository root and publish GitHub Pages from `main` and `/root`.
-
-After pushing updates, hard refresh the live site with `Ctrl + F5`.
+## Publish
+Copy the contents of this folder into the GitHub Pages repo root and push to `main`.

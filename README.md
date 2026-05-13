@@ -1,3 +1,3 @@
-Anchor Point Resource Portal V1.6
+# Anchor Point Resource Portal V1.7
 
-Fixes selection persistence, stale browser storage, and desktop result clipping.
+Compact GitHub Pages resource browser with corrected JSON, improved guide tray layout, session-only guide selections, and searchable workflow presets.

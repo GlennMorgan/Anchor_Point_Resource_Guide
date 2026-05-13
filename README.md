@@ -1,45 +1,24 @@
-# Anchor Point Resource Portal - Tech UI V1.1
+# Anchor Point Resource Portal - V1.2 Compact UI
 
-Static GitHub Pages site for Anchor Point call center resource lookup and quick guide generation.
+Static GitHub Pages resource portal using the corrected Summary Tab JSON.
 
 ## Files
 
-```text
-anchor-point-resources/
-├── index.html
-├── resources.html
-├── guide.html
-├── data/
-│   ├── resources.json
-│   └── resources_metadata.json
-├── assets/
-│   ├── css/styles.css
-│   └── js/app.js
-└── README.md
-```
-
-## Features
-
-- Polished command-center style UI
-- Search and filter resource records
-- Filter by category, urgency, population, and location
-- Select resources for a caller guide
-- Copy individual resources
-- Copy caller-facing resource guide
-- Copy internal call note
-- Print guide
-- Uses only static files, no backend required
-- Stores selections only in the browser using local storage
+- `index.html` - compact command center home
+- `resources.html` - searchable resource database
+- `guide.html` - caller guide builder
+- `data/resources.json` - corrected resource data
+- `data/resources_metadata.json` - metadata
+- `assets/css/styles.css` - compact Poly-inspired interface styling
+- `assets/js/app.js` - client-side search, selection, guide and print logic
 
 ## GitHub Pages
 
-Upload the contents of this folder to the repository root, then enable GitHub Pages from the repository settings.
+Upload the contents of this folder to your repository root and enable GitHub Pages from the `main` branch, `/root` folder.
 
 ## Local testing
 
-Do not open the HTML files directly with `file:///`. JavaScript fetches the JSON data file, which browsers often block from local files.
-
-Use:
+Do not open the HTML files with `file://` if testing JSON loading. From this folder run:
 
 ```powershell
 python -m http.server 8000
@@ -48,9 +27,9 @@ python -m http.server 8000
 Then open:
 
 ```text
-http://localhost:8000/resources.html
+http://localhost:8000/
 ```
 
-## Updating data
+## Privacy
 
-Replace `data/resources.json` and `data/resources_metadata.json` with the newest exported files. The website reads those files at load time.
+No caller data is stored. Selected resources are saved only in the browser's local storage.

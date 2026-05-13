@@ -1,1 +1,66 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><link rel="stylesheet" href="assets/css/styles.css" /><title>Search Resources - Anchor Point</title></head><body data-page="resources"><header class="command-hero compact no-print"><div class="container hero-inner"><div class="nav-row"><a class="brand-lockup" href="index.html"><div class="brand-mark">AP</div><div class="brand-text"><strong>Anchor Point</strong><span>Resource Command Center</span></div></a><nav class="top-nav no-print" aria-label="Primary navigation"><a class="" href="index.html">Home</a><a class="active" href="resources.html">Search</a><a class="" href="guide.html">Guide Builder <span id="selectedCountBadge" class="badge">0</span></a></nav></div><section class="hero"><p class="eyebrow">Directory search</p><h1>Search Resources</h1><p class="hero-copy">Filter approved resources, select referrals, and build a caller-ready guide.</p></section></div></header><main class="container"><div class="shell"><aside class="filter-panel panel no-print"><h2>Control Panel</h2><p class="muted tiny">Use broad terms first, then narrow by category, urgency, population, or location.</p><div class="field"><label for="searchInput">Keyword</label><input id="searchInput" placeholder="food, shelter, benefits, CalFresh, El Cajon..." /></div><div class="field"><label for="categoryFilter">Category</label><select id="categoryFilter"><option>Loading...</option></select></div><div class="field"><label for="urgencyFilter">Urgency</label><select id="urgencyFilter"><option>Loading...</option></select></div><div class="field"><label for="populationFilter">Population</label><select id="populationFilter"><option>Loading...</option></select></div><div class="field"><label for="locationFilter">Location contains</label><input id="locationFilter" placeholder="El Cajon, East County, San Diego..." /></div><div class="filter-actions"><button id="clearFilters" class="btn secondary full">Clear Filters</button><button id="showSelected" class="btn success full">Show Selected Only</button><a class="btn primary full" href="guide.html">Open Guide Builder</a></div></aside><section><div class="results-toolbar panel"><div class="count-display"><strong id="resultCount">0</strong><span class="muted"> matching resources</span></div><div class="chip-row no-print"><span class="chip"><span id="selectedInlineCount">0</span> selected</span><button id="clearSelected" class="btn danger">Clear Selected</button></div></div><div id="results"><div class="loading-state"><strong>Loading resources...</strong><p>Please wait while the resource file loads.</p></div></div><div class="load-more-wrap no-print"><button id="loadMore" class="btn secondary">Load More</button></div></section></div><p class="footer-note">Use audit dates before giving time-sensitive referrals.</p></main><div id="toast" class="toast"></div><script src="assets/js/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Resource Search | Anchor Point Resource Portal</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body data-page="resources">
+  <div class="app-shell">
+    <aside class="side-rail">
+      <a class="brand-lockup" href="index.html" aria-label="Anchor Point Home">
+        <span class="brand-mark">AP</span>
+        <span><strong>Anchor Point</strong><em>Resource Portal</em></span>
+      </a>
+      <nav class="rail-nav" aria-label="Primary navigation">
+        <a href="index.html" data-nav="home"><span>⌘</span>Command</a>
+        <a href="resources.html" data-nav="resources"><span>⌕</span>Search</a>
+        <a href="guide.html" data-nav="guide"><span>▣</span>Guide</a>
+      </nav>
+      <div class="rail-meta">
+        <div class="meta-label">Data source</div>
+        <div id="railRecordCount">Loading...</div>
+        <div class="meta-label">Storage</div>
+        <div>Browser only</div>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="top-bar">
+        <div>
+          <p class="eyebrow">Call Center Resource System</p>
+          <h1>Resource Search</h1>
+        </div>
+        <div class="top-actions">
+          <a class="ghost-btn" href="resources.html">Search</a>
+          <a class="solid-btn" href="guide.html">Build Guide <span id="selectedCountBadge" class="count-badge">0</span></a>
+        </div>
+      </header>
+      
+<section class="search-console glass-card compact-panel">
+  <div class="search-row">
+    <label class="search-box"><span>⌕</span><input id="searchInput" type="search" placeholder="Search by need, organization, phone, city, notes..." /></label>
+    <button id="clearFiltersBtn" class="ghost-btn small">Clear</button>
+  </div>
+  <div class="filter-grid">
+    <label>Category<select id="categoryFilter"><option value="">All categories</option></select></label>
+    <label>Urgency<select id="urgencyFilter"><option value="">All urgency levels</option></select></label>
+    <label>Population<select id="populationFilter"><option value="">All populations</option></select></label>
+    <label>Location<input id="locationFilter" type="search" placeholder="City, county, region" /></label>
+  </div>
+</section>
+
+<section class="results-toolbar">
+  <div><strong id="resultCount">Loading resources...</strong><span id="filterSummary"></span></div>
+  <div class="toolbar-actions"><a class="ghost-btn small" href="guide.html">View Guide <span id="toolbarSelectedCount">0</span></a></div>
+</section>
+
+<section id="resourcesList" class="resource-list compact-list" aria-live="polite"></section>
+
+    </main>
+  </div>
+  <script src="assets/js/app.js"></script>
+  
+</body>
+</html>

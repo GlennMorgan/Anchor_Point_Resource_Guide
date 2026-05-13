@@ -1,26 +1,8 @@
 {
-  "sourceFile": "Summary Tab.html",
+  "name": "Anchor Point Resource Portal",
+  "version": "1.2 Compact UI",
   "recordCount": 1988,
-  "fieldMap": {
-    "Category": "category",
-    "Service Function": "serviceFunction",
-    "Organization": "organization",
-    "Phone / Text": "phoneText",
-    "Urgency": "urgency",
-    "Population": "population",
-    "Description of Services": "descriptionOfServices",
-    "Location": "location",
-    "Hours": "hours",
-    "Website": "website",
-    "Email": "email",
-    "Notes": "notes",
-    "Audit Date": "auditDate"
-  },
-  "notes": [
-    "Generated from the uploaded Google Sheets HTML export.",
-    "Blank spreadsheet columns after Audit Date were omitted.",
-    "auditDate is normalized to YYYY-MM-DD when possible; original value preserved in auditDateOriginal.",
-    "populationTags is split on semicolons for easier filtering.",
-    "active defaults to true for all imported rows."
-  ]
+  "generatedAt": "2026-05-13T05:28:49Z",
+  "source": "Resource Guide Summary Tab corrected JSON",
+  "notes": "Static GitHub Pages resource portal. No caller data is stored."
 }

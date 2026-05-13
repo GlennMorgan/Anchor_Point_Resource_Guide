@@ -1,28 +1,48 @@
-const DATA_URL = 'data/resources.json?v=1.5';
-const META_URL = 'data/resources_metadata.json?v=1.5';
-const STORE = 'anchorPoint.selected';
-const LEGACY_STORES = ['anchorPoint.selected.v14','anchorPoint.selected.v13','anchorPoint.selected.v12'];
-let resources = [];
-let metadata = {};
+const DATA_URL = 'data/resources.json?v=1.6';
+const META_URL = 'data/resources_metadata.json?v=1.6';
+const STORE = 'anchorPoint.selected.v16';
+const LEGACY_STORES = [
+  'anchorPoint.selected',
+  'anchorPoint.selected.v14',
+  'anchorPoint.selected.v13',
+  'anchorPoint.selected.v12',
+  'anchorPointGuideSelection',
+  'anchorPointSelectedResources',
+  'anchorPointSelectedResourceIds',
+  'selectedResources'
+];
+function purgeLegacySelectionStores(){
+  for(const key of LEGACY_STORES){
+    try{ localStorage.removeItem(key); sessionStorage.removeItem(key); }catch(e){}
+  }
+}
 function readSelectedIds(){
   const params = new URLSearchParams(location.search);
   const idsFromUrl = (params.get('ids') || '').split(',').map(s => s.trim()).filter(Boolean);
-  if(idsFromUrl.length) return idsFromUrl;
-  const candidates = [STORE, ...LEGACY_STORES];
-  for(const key of candidates){
-    try{
-      const raw = localStorage.getItem(key) || sessionStorage.getItem(key);
-      const ids = raw ? JSON.parse(raw) : [];
-      if(Array.isArray(ids) && ids.length) return ids;
-    }catch(e){console.warn('Unable to read selected resources from storage', key, e);}
+  if(idsFromUrl.length){
+    purgeLegacySelectionStores();
+    try{ sessionStorage.setItem(STORE, JSON.stringify(idsFromUrl)); }catch(e){}
+    return idsFromUrl;
   }
-  return [];
+  purgeLegacySelectionStores();
+  try{
+    const raw = sessionStorage.getItem(STORE);
+    const ids = raw ? JSON.parse(raw) : [];
+    return Array.isArray(ids) ? ids.filter(Boolean) : [];
+  }catch(e){
+    console.warn('Unable to read selected resources from session storage', e);
+    return [];
+  }
+}
+function clearSelectionStorage(){
+  purgeLegacySelectionStores();
+  try{ sessionStorage.removeItem(STORE); }catch(e){}
 }
 let selected = new Set(readSelectedIds());
 let showingSelectedOnly = false;
 let activeWorkflow = '';
-let viewMode = localStorage.getItem('anchorPoint.viewMode.v14') || 'cards';
-let sortMode = localStorage.getItem('anchorPoint.sortMode.v14') || 'urgency';
+let viewMode = localStorage.getItem('anchorPoint.viewMode.v16') || 'cards';
+let sortMode = localStorage.getItem('anchorPoint.sortMode.v16') || 'urgency';
 const page = document.body.dataset.page || 'home';
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -41,13 +61,12 @@ const workflows = {
   jobs: {label:'Job Search', terms:['job','employment','workforce','career','careers','hiring','training','resume','application','edd']}
 };
 function persistSelected(){
-  const ids = JSON.stringify([...selected]);
   try{
-    localStorage.setItem(STORE, ids);
-    sessionStorage.setItem(STORE, ids);
-    // Keep the last legacy key updated for older cached pages during deployment.
-    localStorage.setItem('anchorPoint.selected.v14', ids);
-    sessionStorage.setItem('anchorPoint.selected.v14', ids);
+    if(selected.size){
+      sessionStorage.setItem(STORE, JSON.stringify([...selected]));
+    }else{
+      clearSelectionStorage();
+    }
   }catch(e){console.warn('Unable to persist selected resources', e);}
 }
 function refreshSelectedFromStorage(){
@@ -78,8 +97,19 @@ function wireGuideLinks(){
     a.href = a.dataset.baseHref + suffix;
   });
 }
+function clearAllSelections(){
+  selected.clear();
+  clearSelectionStorage();
+  renderSelected();
+  updateCounts();
+  renderGuidePreview();
+  wireGuideLinks();
+  if(page==='resources') renderResults();
+  if(page==='guide') renderMatches();
+  toast('Selected resources cleared.');
+}
 function wireCommon(){
-  $$('[id="clearSelectedBtn"], [id="clearSelectedBtn2"]').forEach(b=>b.addEventListener('click',()=>{selected.clear(); save(); if(page==='resources') renderResults(); toast('Selected resources cleared.');}));
+  $$('[id="clearSelectedBtn"], [id="clearSelectedBtn2"]').forEach(b=>b.addEventListener('click',()=>{clearAllSelections();}));
   $$('[id="copyGuideBtn"], [id="copyGuideBtn2"]').forEach(b=>b.addEventListener('click',copyGuide));
   $$('[id="printGuideBtn"], [id="printGuideBtn2"]').forEach(b=>b.addEventListener('click',printGuide));
   const tray=$('guideTray'); if($('trayToggle')) $('trayToggle').addEventListener('click',()=>tray.classList.toggle('open'));

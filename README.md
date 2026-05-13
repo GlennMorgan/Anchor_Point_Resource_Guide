@@ -1,3 +1,3 @@
-# Anchor Point Resource Portal V1.5
+Anchor Point Resource Portal V1.6
 
-Static GitHub Pages resource portal. V1.5 fixes guide selection persistence across pages, keeps the Guide Tray in the desktop grid layout, improves compact badges, and keeps the dense print output.
+Fixes selection persistence, stale browser storage, and desktop result clipping.

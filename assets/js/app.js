@@ -1,8 +1,10 @@
-const DATA_URL = 'data/resources.json?v=1.6';
-const META_URL = 'data/resources_metadata.json?v=1.6';
-const STORE = 'anchorPoint.selected.v16';
+const DATA_URL = 'data/resources.json?v=1.8';
+const META_URL = 'data/resources_metadata.json?v=1.8';
+const STORE = 'anchorPoint.selected.v18';
 const LEGACY_STORES = [
   'anchorPoint.selected',
+  'anchorPoint.selected.v17',
+  'anchorPoint.selected.v16',
   'anchorPoint.selected.v14',
   'anchorPoint.selected.v13',
   'anchorPoint.selected.v12',
@@ -41,8 +43,8 @@ function clearSelectionStorage(){
 let selected = new Set(readSelectedIds());
 let showingSelectedOnly = false;
 let activeWorkflow = '';
-let viewMode = localStorage.getItem('anchorPoint.viewMode.v16') || 'cards';
-let sortMode = localStorage.getItem('anchorPoint.sortMode.v16') || 'urgency';
+let viewMode = localStorage.getItem('anchorPoint.viewMode.v18') || 'cards';
+let sortMode = localStorage.getItem('anchorPoint.sortMode.v18') || 'urgency';
 const page = document.body.dataset.page || 'home';
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -108,11 +110,42 @@ function clearAllSelections(){
   if(page==='guide') renderMatches();
   toast('Selected resources cleared.');
 }
+function setTrayCollapsed(collapsed){
+  const app = document.querySelector('.app');
+  const tray = $('guideTray');
+  if(!app || !tray) return;
+  app.classList.toggle('tray-collapsed', collapsed);
+  tray.setAttribute('aria-hidden', collapsed ? 'true' : 'false');
+  const label = collapsed ? 'Show Tray' : 'Hide Tray';
+  $$('[id="trayCollapseBtn"]').forEach(b=>b.textContent = label);
+  let floating = $('showTrayFloating');
+  if(collapsed){
+    if(!floating){
+      floating = document.createElement('button');
+      floating.id = 'showTrayFloating';
+      floating.type = 'button';
+      floating.className = 'btn primary floating-show-tray';
+      floating.textContent = 'Show Guide Tray';
+      floating.addEventListener('click',()=>setTrayCollapsed(false));
+      document.body.appendChild(floating);
+    }
+    floating.style.display = 'block';
+  }else if(floating){
+    floating.style.display = 'none';
+  }
+  try{ sessionStorage.setItem('anchorPoint.trayCollapsed.v18', collapsed ? '1' : '0'); }catch(e){}
+}
+function toggleTrayCollapsed(){
+  const app = document.querySelector('.app');
+  setTrayCollapsed(!app?.classList.contains('tray-collapsed'));
+}
 function wireCommon(){
   $$('[id="clearSelectedBtn"], [id="clearSelectedBtn2"]').forEach(b=>b.addEventListener('click',()=>{clearAllSelections();}));
   $$('[id="copyGuideBtn"], [id="copyGuideBtn2"]').forEach(b=>b.addEventListener('click',copyGuide));
   $$('[id="printGuideBtn"], [id="printGuideBtn2"]').forEach(b=>b.addEventListener('click',printGuide));
   const tray=$('guideTray'); if($('trayToggle')) $('trayToggle').addEventListener('click',()=>tray.classList.toggle('open'));
+  $$('[id="trayHideBtn"], [id="trayCollapseBtn"]').forEach(b=>b.addEventListener('click', toggleTrayCollapsed));
+  try{ if(sessionStorage.getItem('anchorPoint.trayCollapsed.v18') === '1') setTrayCollapsed(true); }catch(e){}
 }
 function initHome(){ const form=$('homeSearchForm'); if(form) form.addEventListener('submit',e=>{e.preventDefault(); location.href='resources.html?q='+encodeURIComponent($('homeSearch').value||'');}); }
 function initResources(){
@@ -123,8 +156,8 @@ function initResources(){
   if($('searchForm')) $('searchForm').addEventListener('submit',e=>{e.preventDefault(); activeWorkflow=''; $('keyword').value=$('q').value; renderResults();});
   if($('clearFilters')) $('clearFilters').addEventListener('click',()=>{['keyword','category','urgency','population','location','q'].forEach(id=>{if($(id)) $(id).value='';}); showingSelectedOnly=false; activeWorkflow=''; renderResults();});
   if($('showSelectedBtn')) $('showSelectedBtn').addEventListener('click',()=>{showingSelectedOnly=!showingSelectedOnly; $('showSelectedBtn').textContent=showingSelectedOnly?'Show All':'Show Selected'; renderResults();});
-  if($('viewMode')) $('viewMode').addEventListener('change',e=>{viewMode=e.target.value; localStorage.setItem('anchorPoint.viewMode.v14',viewMode); renderResults();});
-  if($('sortMode')) $('sortMode').addEventListener('change',e=>{sortMode=e.target.value; localStorage.setItem('anchorPoint.sortMode.v14',sortMode); renderResults();});
+  if($('viewMode')) $('viewMode').addEventListener('change',e=>{viewMode=e.target.value; localStorage.setItem('anchorPoint.viewMode.v18',viewMode); renderResults();});
+  if($('sortMode')) $('sortMode').addEventListener('change',e=>{sortMode=e.target.value; localStorage.setItem('anchorPoint.sortMode.v18',sortMode); renderResults();});
   renderResults();
 }
 function getFilters(){return {kw:low($('keyword')?.value||$('q')?.value),cat:txt($('category')?.value),urg:txt($('urgency')?.value),pop:txt($('population')?.value),loc:low($('location')?.value)};}

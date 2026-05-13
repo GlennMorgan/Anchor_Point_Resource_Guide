@@ -1,3 +1,3 @@
-# Anchor Point Resource Portal V1.7
+Anchor Point Resource Portal V1.8
 
-Compact GitHub Pages resource browser with corrected JSON, improved guide tray layout, session-only guide selections, and searchable workflow presets.
+Fixes tray hide/show behavior and labels the Command page version.

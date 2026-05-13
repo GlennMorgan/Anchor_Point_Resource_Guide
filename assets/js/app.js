@@ -1,161 +1,70 @@
-
-const DATA_URL = 'data/resources.json';
-const META_URL = 'data/resources_metadata.json';
-const STORAGE_KEY = 'anchorPointSelectedResources.v12';
+const DATA_URL = 'data/resources.json?v=1.3';
+const META_URL = 'data/resources_metadata.json?v=1.3';
+const STORE = 'anchorPoint.selected.v13';
 let resources = [];
-let selectedIds = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
-
+let metadata = {};
+let selected = new Set(JSON.parse(localStorage.getItem(STORE) || '[]'));
+let showingSelectedOnly = false;
+const page = document.body.dataset.page || 'home';
 const $ = (id) => document.getElementById(id);
-const text = (v) => (v === null || v === undefined ? '' : String(v)).trim();
-const norm = (v) => text(v).toLowerCase();
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+const txt = (v) => (v === null || v === undefined ? '' : String(v)).trim();
+const low = (v) => txt(v).toLowerCase();
 const uniq = (arr) => [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b));
-const safe = (s) => text(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-
-function saveSelected(){ localStorage.setItem(STORAGE_KEY, JSON.stringify([...selectedIds])); updateSelectedBadges(); }
-function updateSelectedBadges(){
-  const n = selectedIds.size;
-  ['selectedCountBadge','toolbarSelectedCount','statSelected'].forEach(id => { if($(id)) $(id).textContent = n; });
+const esc = (s) => txt(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const field = (r, k) => txt(r[k]);
+const allText = (r) => [r.category,r.serviceFunction,r.organization,r.phoneText,r.urgency,r.population,r.descriptionOfServices,r.location,r.hours,r.website,r.email,r.notes].map(txt).join(' ').toLowerCase();
+function save(){localStorage.setItem(STORE, JSON.stringify([...selected])); renderSelected(); updateCounts(); renderGuidePreview();}
+function toast(msg){const old=document.querySelector('.toast'); if(old) old.remove(); const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),1800);}
+function recordById(id){return resources.find(r => r.id === id);}
+function validUrgency(v){const s=txt(v); return s && !/^https?:/i.test(s) && !/apply now/i.test(s) && s.length < 60;}
+function popTags(r){ if(Array.isArray(r.populationTags)) return r.populationTags.map(txt).filter(Boolean); return txt(r.population).split(/[;,]/).map(s=>s.trim()).filter(Boolean); }
+function chipClass(urgency){const u=low(urgency); if(u.includes('immediate')||u.includes('24/7')) return 'chip imm'; if(u.includes('urgent')) return 'chip urgent'; return 'chip';}
+function optionList(id, values){const el=$(id); if(!el) return; const first=el.options[0]?.outerHTML || '<option value="">All</option>'; el.innerHTML=first + values.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');}
+async function load(){try{const [r,m]=await Promise.all([fetch(DATA_URL,{cache:'no-store'}).then(x=>x.json()), fetch(META_URL,{cache:'no-store'}).then(x=>x.ok?x.json():{}).catch(()=>({}))]); resources = Array.isArray(r)?r:[]; metadata=m||{}; init();}catch(e){console.error(e); const target=$('results')||$('matchResults')||$('selectedList'); if(target) target.innerHTML=`<div class="empty">Could not load <b>data/resources.json</b>. On GitHub Pages, wait for deployment, then hard refresh with Ctrl+F5.</div>`;}}
+function init(){populateFilters(); wireCommon(); if(page==='home') initHome(); if(page==='resources') initResources(); if(page==='guide') initGuide(); renderSelected(); updateCounts();}
+function updateCounts(){const cats=uniq(resources.map(r=>field(r,'category'))); ['statRecords','railRecordCount'].forEach(id=>{if($(id)) $(id).textContent=resources.length.toLocaleString();}); if($('statCategories')) $('statCategories').textContent=cats.length; ['statSelected','topSelectedCount','trayCount'].forEach(id=>{ $$( '#' + id).forEach(el=>el.textContent=selected.size); });}
+function populateFilters(){optionList('category', uniq(resources.map(r=>field(r,'category')))); optionList('urgency', uniq(resources.map(r=>field(r,'urgency')).filter(validUrgency))); optionList('population', uniq(resources.flatMap(popTags)));}
+function wireCommon(){
+  $$('[id="clearSelectedBtn"], [id="clearSelectedBtn2"]').forEach(b=>b.addEventListener('click',()=>{selected.clear(); save(); if(page==='resources') renderResults(); toast('Selected resources cleared.');}));
+  $$('[id="copyGuideBtn"], [id="copyGuideBtn2"]').forEach(b=>b.addEventListener('click',copyGuide));
+  $$('[id="printGuideBtn"], [id="printGuideBtn2"]').forEach(b=>b.addEventListener('click',printGuide));
+  const tray=$('guideTray'); if($('trayToggle')) $('trayToggle').addEventListener('click',()=>tray.classList.toggle('open'));
 }
-function showToast(msg){
-  const old = document.querySelector('.toast'); if(old) old.remove();
-  const t = document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t);
-  setTimeout(()=>t.remove(),2200);
-}
-function resourceText(r){ return [r.category,r.serviceFunction,r.organization,r.phoneText,r.urgency,r.population,r.descriptionOfServices,r.location,r.hours,r.website,r.email,r.notes].map(text).join(' ').toLowerCase(); }
-function validUrgency(v){
-  const s=text(v); if(!s || /^https?:/i.test(s) || s.length>60) return false;
-  if(/apply now|see website|contact/i.test(s)) return false;
-  return true;
-}
-function getPopTags(r){
-  let tags = Array.isArray(r.populationTags) ? r.populationTags : [];
-  if(!tags.length && r.population) tags = r.population.split(/[;,]/);
-  return tags.map(t=>text(t)).filter(Boolean);
-}
-async function loadData(){
-  try{
-    const [res, metaRes] = await Promise.all([fetch(DATA_URL), fetch(META_URL).catch(()=>null)]);
-    if(!res.ok) throw new Error(`Could not load ${DATA_URL}. Status ${res.status}`);
-    resources = await res.json();
-    let meta = null;
-    try{ if(metaRes && metaRes.ok) meta = await metaRes.json(); }catch(e){}
-    hydrateGlobal(meta);
-    routePage();
-  } catch(err){
-    console.error(err);
-    const target = $('resourcesList') || $('matchResults') || document.querySelector('.main-panel');
-    if(target) target.innerHTML = `<div class="error-box"><strong>Resource data did not load.</strong><br>${safe(err.message)}<br><br>When testing locally, use a local server or GitHub Pages instead of opening with file://.</div>`;
-  }
-}
-function hydrateGlobal(meta){
-  updateSelectedBadges();
-  if($('railRecordCount')) $('railRecordCount').textContent = `${resources.length.toLocaleString()} records`;
-  if($('statRecords')) $('statRecords').textContent = resources.length.toLocaleString();
-  if($('statCategories')) $('statCategories').textContent = uniq(resources.map(r=>r.category)).length;
-  if($('statVerified')) $('statVerified').textContent = resources.filter(r => /corrected|verified/i.test(`${r.correctionStatus||''} ${r.verificationStatus||''}`)).length.toLocaleString();
-  document.querySelectorAll('.rail-nav a').forEach(a=>{ if(a.dataset.nav === document.body.dataset.page) a.classList.add('active'); });
-}
-function routePage(){
-  const page = document.body.dataset.page;
-  if(page === 'home') initHome();
-  if(page === 'resources') initResources();
-  if(page === 'guide') initGuide();
-}
-function initHome(){
-  $('homeSearchBtn')?.addEventListener('click', () => {
-    const q = encodeURIComponent($('homeQuickSearch').value.trim());
-    location.href = `resources.html${q ? '?q='+q : ''}`;
-  });
-  $('homeQuickSearch')?.addEventListener('keydown', (e) => { if(e.key==='Enter') $('homeSearchBtn').click(); });
-}
-function fillSelect(el, vals){ vals.forEach(v => el.insertAdjacentHTML('beforeend', `<option value="${safe(v)}">${safe(v)}</option>`)); }
+function initHome(){ const form=$('homeSearchForm'); if(form) form.addEventListener('submit',e=>{e.preventDefault(); location.href='resources.html?q='+encodeURIComponent($('homeSearch').value||'');}); }
 function initResources(){
-  fillSelect($('categoryFilter'), uniq(resources.map(r=>r.category)));
-  fillSelect($('urgencyFilter'), uniq(resources.map(r=>r.urgency).filter(validUrgency)));
-  fillSelect($('populationFilter'), uniq(resources.flatMap(getPopTags)));
-  const params = new URLSearchParams(location.search);
-  if(params.get('q')) $('searchInput').value = params.get('q');
-  if(params.get('urgency')) $('urgencyFilter').value = params.get('urgency');
-  ['searchInput','categoryFilter','urgencyFilter','populationFilter','locationFilter'].forEach(id => $(id).addEventListener('input', renderResources));
-  $('clearFiltersBtn').addEventListener('click',()=>{ ['searchInput','categoryFilter','urgencyFilter','populationFilter','locationFilter'].forEach(id=>$(id).value=''); renderResources(); });
-  renderResources();
+  const params=new URLSearchParams(location.search); const q=params.get('q')||''; if($('keyword')) $('keyword').value=q; if($('q')) $('q').value=q; if(params.get('urgency') && $('urgency')) $('urgency').value=params.get('urgency');
+  ['keyword','category','urgency','population','location'].forEach(id=>{ if($(id)) $(id).addEventListener('input', renderResults); if($(id)) $(id).addEventListener('change', renderResults); });
+  if($('searchForm')) $('searchForm').addEventListener('submit',e=>{e.preventDefault(); $('keyword').value=$('q').value; renderResults();});
+  if($('clearFilters')) $('clearFilters').addEventListener('click',()=>{['keyword','category','urgency','population','location','q'].forEach(id=>{if($(id)) $(id).value='';}); showingSelectedOnly=false; renderResults();});
+  if($('showSelectedBtn')) $('showSelectedBtn').addEventListener('click',()=>{showingSelectedOnly=!showingSelectedOnly; $('showSelectedBtn').textContent=showingSelectedOnly?'Show All':'Show Selected'; renderResults();});
+  renderResults();
 }
-function filterResources({q='', category='', urgency='', population='', location=''}={}){
-  const terms = norm(q).split(/\s+/).filter(Boolean);
-  return resources.filter(r => {
-    if(category && r.category !== category) return false;
-    if(urgency && r.urgency !== urgency) return false;
-    if(population && !getPopTags(r).some(t => norm(t) === norm(population))) return false;
-    if(location && !norm(`${r.location} ${r.notes}`).includes(norm(location))) return false;
-    if(terms.length && !terms.every(t => resourceText(r).includes(t))) return false;
-    return true;
-  });
+function getFilters(){return {kw:low($('keyword')?.value||$('q')?.value),cat:txt($('category')?.value),urg:txt($('urgency')?.value),pop:txt($('population')?.value),loc:low($('location')?.value)};}
+function filteredResources(){const f=getFilters(); let rows=resources.filter(r=>{
+  if(showingSelectedOnly && !selected.has(r.id)) return false;
+  if(f.kw && !allText(r).includes(f.kw)) return false;
+  if(f.cat && field(r,'category')!==f.cat) return false;
+  if(f.urg && field(r,'urgency')!==f.urg) return false;
+  if(f.pop && !popTags(r).includes(f.pop)) return false;
+  if(f.loc && !low(r.location).includes(f.loc) && !low(r.notes).includes(f.loc)) return false;
+  return true; });
+  return rows;
 }
-function renderResources(){
-  const filters = { q:$('searchInput').value, category:$('categoryFilter').value, urgency:$('urgencyFilter').value, population:$('populationFilter').value, location:$('locationFilter').value };
-  const results = filterResources(filters);
-  $('resultCount').textContent = `${results.length.toLocaleString()} resources`;
-  const active = Object.entries(filters).filter(([k,v])=>v).map(([k,v])=>`${k}: ${v}`);
-  $('filterSummary').textContent = active.length ? active.join(' • ') : 'Showing all records';
-  $('resourcesList').innerHTML = results.slice(0,240).map(resourceCard).join('') + (results.length>240 ? `<div class="empty-state">Showing first 240 records. Narrow the search for more precision.</div>` : '');
-  bindResourceButtons();
-}
-function resourceCard(r){
-  const isSel = selectedIds.has(r.id);
-  const urgencyClass = /immediate|urgent|crisis/i.test(r.urgency) ? ' urgent' : '';
-  return `<article class="resource-card ${isSel?'selected':''}" data-id="${safe(r.id)}">
-    <div class="card-top"><div><h3>${safe(r.organization||'Unnamed Resource')}</h3><div class="service-line">${safe(r.serviceFunction||r.category||'Resource')}</div></div><span class="chip${urgencyClass}">${safe(r.urgency||'No urgency')}</span></div>
-    <p class="card-desc">${safe(r.descriptionOfServices||r.notes||'No description available.')}</p>
-    <div class="chip-row">${[r.category, ...getPopTags(r).slice(0,2)].filter(Boolean).map(v=>`<span class="chip">${safe(v)}</span>`).join('')}</div>
-    <div class="detail-grid"><div><b>Phone</b><br>${safe(r.phoneText||'Not listed')}</div><div><b>Location</b><br>${safe(r.location||'Not listed')}</div><div><b>Hours</b><br>${safe(r.hours||'Not listed')}</div><div><b>Audit</b><br>${safe(r.auditDate||r.auditDateOriginal||'Not listed')}</div></div>
-    <div class="card-actions"><button class="ghost-btn small select-btn" data-id="${safe(r.id)}">${isSel?'Remove':'Select'}</button>${r.website?`<a class="ghost-btn small" target="_blank" rel="noopener" href="${safe(r.website)}">Website</a>`:''}</div>
-  </article>`;
-}
-function bindResourceButtons(){
-  document.querySelectorAll('.select-btn').forEach(btn => btn.addEventListener('click', () => toggleSelected(btn.dataset.id)));
-}
-function toggleSelected(id){
-  if(selectedIds.has(id)){ selectedIds.delete(id); showToast('Removed from guide'); }
-  else { selectedIds.add(id); showToast('Added to guide'); }
-  saveSelected();
-  if(document.body.dataset.page==='resources') renderResources();
-  if(document.body.dataset.page==='guide') renderSelected();
-}
-function initGuide(){
-  fillSelect($('callerPopulation'), uniq(resources.flatMap(getPopTags)));
-  fillSelect($('callerUrgency'), uniq(resources.map(r=>r.urgency).filter(validUrgency)));
-  $('findMatchesBtn').addEventListener('click', renderMatches);
-  ['callerNeed','callerLocation','callerPopulation','callerUrgency'].forEach(id => $(id).addEventListener('keydown', e => { if(e.key==='Enter') renderMatches(); }));
-  $('clearSelectedBtn').addEventListener('click',()=>{ selectedIds.clear(); saveSelected(); renderSelected(); renderPrintTable(); });
-  $('copyGuideBtn').addEventListener('click',()=>copyText(buildGuideText(false),'Guide copied'));
-  $('copyNoteBtn').addEventListener('click',()=>copyText(buildGuideText(true),'Call note copied'));
-  $('printGuideBtn').addEventListener('click',()=>{ renderPrintTable(); window.print(); });
-  renderSelected();
-}
-function renderMatches(){
-  const filters = {q:$('callerNeed').value, location:$('callerLocation').value, population:$('callerPopulation').value, urgency:$('callerUrgency').value};
-  const matches = filterResources(filters).slice(0,30);
-  $('matchResults').innerHTML = matches.length ? matches.map(r => `<div class="mini-resource"><strong>${safe(r.organization)}</strong><p>${safe(r.serviceFunction)} • ${safe(r.phoneText||'No phone')} • ${safe(r.location||'No location')}</p><p>${safe(r.descriptionOfServices||'')}</p><div class="mini-actions"><button class="ghost-btn small select-btn" data-id="${safe(r.id)}">${selectedIds.has(r.id)?'Remove':'Select'}</button>${r.website?`<a class="ghost-btn small" target="_blank" rel="noopener" href="${safe(r.website)}">Website</a>`:''}</div></div>`).join('') : '<div class="empty-state">No matching resources found. Broaden the caller need or location.</div>';
-  bindResourceButtons();
-}
-function selectedResources(){ return [...selectedIds].map(id => resources.find(r=>r.id===id)).filter(Boolean); }
-function renderSelected(){
-  const rows = selectedResources();
-  $('selectedResources').innerHTML = rows.length ? rows.map(r => `<div class="selected-item"><div><strong>${safe(r.organization)}</strong><small>${safe(r.serviceFunction)} • ${safe(r.phoneText||'No phone')} • ${safe(r.location||'No location')}</small></div><button class="ghost-btn small select-btn" data-id="${safe(r.id)}">Remove</button></div>`).join('') : '<div class="empty-state">No resources selected. Use matching resources or search to add items.</div>';
-  bindResourceButtons(); renderPrintTable();
-}
-function buildGuideText(noteOnly=false){
-  const ctx = [$('callerNeed')?.value && `Need: ${$('callerNeed').value}`, $('callerLocation')?.value && `Location: ${$('callerLocation').value}`, $('callerPopulation')?.value && `Population: ${$('callerPopulation').value}`, $('callerUrgency')?.value && `Urgency: ${$('callerUrgency').value}`].filter(Boolean).join(' | ');
-  const rows = selectedResources();
-  if(noteOnly){ return `Anchor Point call note${ctx?' - '+ctx:''}. Resources provided: ${rows.map(r=>`${r.organization} (${r.phoneText||'no phone listed'})`).join('; ') || 'none selected'}.`; }
-  return `Anchor Point Resource Guide${ctx?'\n'+ctx:''}\n\n` + rows.map((r,i)=>`${i+1}. ${r.organization}\nService: ${r.serviceFunction||''}\nPhone/Text: ${r.phoneText||'Not listed'}\nLocation: ${r.location||'Not listed'}\nHours: ${r.hours||'Not listed'}\nWebsite: ${r.website||'Not listed'}\nNotes: ${r.notes||r.descriptionOfServices||''}`).join('\n\n');
-}
-async function copyText(txt,msg){ await navigator.clipboard.writeText(txt); showToast(msg); }
-function renderPrintTable(){
-  const tbody = document.querySelector('#printTable tbody'); if(!tbody) return;
-  const rows = selectedResources();
-  const ctx = [$('callerNeed')?.value && `Need: ${$('callerNeed').value}`, $('callerLocation')?.value && `Location: ${$('callerLocation').value}`, $('callerPopulation')?.value && `Population: ${$('callerPopulation').value}`, $('callerUrgency')?.value && `Urgency: ${$('callerUrgency').value}`].filter(Boolean).join(' | ');
-  if($('printContext')) $('printContext').textContent = ctx || 'Selected resources';
-  tbody.innerHTML = rows.map((r,i)=>`<tr><td>${i+1}</td><td><div class="print-org">${safe(r.organization)}</div><div class="print-service">${safe(r.category)} / ${safe(r.serviceFunction)}</div><div class="print-desc">${safe(r.descriptionOfServices)}</div></td><td><strong>${safe(r.phoneText||'Not listed')}</strong><br>${r.email?`<span class="print-muted">${safe(r.email)}</span><br>`:''}${r.website?`<span class="print-url">${safe(r.website)}</span>`:''}</td><td>${safe(r.location||'Not listed')}<br><span class="print-muted">${safe(r.hours||'Hours not listed')}</span></td><td>${safe(r.notes||'')}<br><span class="print-muted">Urgency: ${safe(r.urgency||'')} | Audit: ${safe(r.auditDate||r.auditDateOriginal||'')}</span></td></tr>`).join('');
-}
-loadData();
+function renderResults(){const rows=filteredResources(); const out=$('results'); if(!out) return; if($('resultCount')) $('resultCount').textContent=rows.length.toLocaleString()+' resources'; const summary=[]; const f=getFilters(); if(f.kw) summary.push('keyword'); if(f.cat) summary.push(f.cat); if(f.urg) summary.push(f.urg); if(f.pop) summary.push(f.pop); if(f.loc) summary.push('location'); if(showingSelectedOnly) summary.push('selected only'); if($('filterSummary')) $('filterSummary').textContent=summary.length?' · '+summary.join(' · '):''; if(!rows.length){out.innerHTML='<div class="empty">No resources matched those filters.</div>'; return;} out.innerHTML=rows.slice(0,180).map(cardHTML).join('') + (rows.length>180?`<div class="empty">Showing first 180 of ${rows.length.toLocaleString()} matches. Narrow the search to reduce results.</div>`:''); wireCards();}
+function cardHTML(r){const sel=selected.has(r.id); const url=field(r,'website'); return `<article class="resource-card ${sel?'selected':''}" data-id="${esc(r.id)}"><div class="card-top"><div><h3>${esc(r.organization||'Unnamed Resource')}</h3><div class="service">${esc(r.serviceFunction||r.category||'Resource')}</div></div><span class="${chipClass(r.urgency)}">${esc(r.urgency||'Unspecified')}</span></div><p class="desc">${esc(r.descriptionOfServices||r.notes||'No service description available.')}</p><div class="chips"><span class="chip">${esc(r.category||'Category')}</span>${r.auditDate?`<span class="chip verified">Verified ${esc(r.auditDate)}</span>`:''}</div><div class="info"><div><b>Phone</b><br>${esc(r.phoneText||'Not listed')}</div><div><b>Hours</b><br>${esc(r.hours||'Not listed')}</div><div><b>Location</b><br>${esc(r.location||'Not listed')}</div><div><b>Population</b><br>${esc(r.population||'Not listed')}</div></div><div class="card-actions"><button class="mini-btn primary add-btn">${sel?'Remove':'Add to Guide'}</button><button class="mini-btn copy-one">Copy</button>${url?`<a class="mini-btn" href="${esc(url)}" target="_blank" rel="noopener">Open</a>`:''}</div></article>`;}
+function wireCards(){ $$('.resource-card').forEach(card=>{const id=card.dataset.id; card.querySelector('.add-btn')?.addEventListener('click',()=>toggle(id)); card.querySelector('.copy-one')?.addEventListener('click',()=>copyText(resourcePlain(recordById(id))));}); }
+function toggle(id){ if(selected.has(id)){selected.delete(id); toast('Removed from guide.');} else {selected.add(id); toast('Added to guide.');} save(); if(page==='resources') renderResults(); if(page==='guide') renderMatches(); }
+function renderSelected(){const list=$('selectedList'); if(!list) return; const rows=[...selected].map(recordById).filter(Boolean); if(!rows.length){list.innerHTML='<div class="empty">No resources selected yet.</div>'; return;} list.innerHTML=rows.map(r=>`<div class="guide-item"><div><strong>${esc(r.organization)}</strong><small>${esc(r.serviceFunction)} · ${esc(r.phoneText||'No phone')}</small></div><button class="mini-btn danger" data-remove="${esc(r.id)}">×</button></div>`).join(''); $$('[data-remove]').forEach(b=>b.addEventListener('click',()=>toggle(b.dataset.remove)));}
+function initGuide(){['callerNeed','callerLocation','callerPopulation','callerNotes'].forEach(id=>$(id)?.addEventListener('input',renderGuidePreview)); if($('guideSearchForm')) $('guideSearchForm').addEventListener('submit',e=>{e.preventDefault(); $('callerNeed').value=$('guideQuickSearch').value; renderMatches(); renderGuidePreview();}); if($('findMatchesBtn')) $('findMatchesBtn').addEventListener('click',renderMatches); renderGuidePreview();}
+function matchScore(r){const need=low($('callerNeed')?.value||$('guideQuickSearch')?.value); const loc=low($('callerLocation')?.value); const pop=low($('callerPopulation')?.value); let score=0; const blob=allText(r); if(need){need.split(/\s+/).filter(Boolean).forEach(t=>{ if(blob.includes(t)) score+=3; });} if(loc && (low(r.location).includes(loc)||low(r.notes).includes(loc))) score+=5; if(pop && low(r.population).includes(pop)) score+=4; if(low(r.urgency).includes('immediate')) score+=1; return score;}
+function renderMatches(){const target=$('matchResults'); if(!target) return; const rows=resources.map(r=>[r,matchScore(r)]).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,20).map(x=>x[0]); if(!rows.length){target.innerHTML='<div class="empty">No matches yet. Try a simpler need such as shelter, food, benefits, recovery, family, or jobs.</div>'; return;} target.innerHTML=rows.map(r=>`<div class="guide-item"><div><strong>${esc(r.organization)}</strong><small>${esc(r.serviceFunction)} · ${esc(r.location||'No location')} · ${esc(r.urgency||'')}</small></div><button class="mini-btn primary" data-addmatch="${esc(r.id)}">${selected.has(r.id)?'Remove':'Add'}</button></div>`).join(''); $$('[data-addmatch]').forEach(b=>b.addEventListener('click',()=>toggle(b.dataset.addmatch)));}
+function selectedRows(){return [...selected].map(recordById).filter(Boolean);}
+function context(){return {need:txt($('callerNeed')?.value),location:txt($('callerLocation')?.value),population:txt($('callerPopulation')?.value),notes:txt($('callerNotes')?.value)};}
+function renderGuidePreview(){const p=$('guidePreview'); if(!p) return; const c=context(); const rows=selectedRows(); p.innerHTML=`<h2>Anchor Point Resource Guide</h2><p>Generated from approved resource records. Confirm audit dates before time-sensitive referrals.</p><div class="preview-meta"><div><b>Need</b><br>${esc(c.need||'Not specified')}</div><div><b>Location</b><br>${esc(c.location||'Not specified')}</div><div><b>Population</b><br>${esc(c.population||'Not specified')}</div></div>${c.notes?`<p><b>Notes:</b> ${esc(c.notes)}</p>`:''}<div class="preview-list">${rows.length?rows.map((r,i)=>`<div class="preview-row"><div class="idx">${i+1}</div><div class="content"><h3>${esc(r.organization)}</h3><p><b>${esc(r.serviceFunction)}</b> · ${esc(r.urgency)}</p><p>${esc(r.descriptionOfServices||r.notes)}</p><p><b>Phone:</b> ${esc(r.phoneText||'Not listed')} &nbsp; <b>Hours:</b> ${esc(r.hours||'Not listed')}</p><p><b>Location:</b> ${esc(r.location||'Not listed')}</p></div></div>`).join(''):'<div class="empty">No resources selected yet.</div>'}</div>`;}
+function resourcePlain(r,i){if(!r) return ''; return `${i?i+'. ':''}${txt(r.organization)}\nService: ${txt(r.serviceFunction)}\nPhone: ${txt(r.phoneText)||'Not listed'}\nLocation: ${txt(r.location)||'Not listed'}\nHours: ${txt(r.hours)||'Not listed'}\nWebsite: ${txt(r.website)||'Not listed'}\nNotes: ${txt(r.notes)||txt(r.descriptionOfServices)||''}\nAudit Date: ${txt(r.auditDate)||'Not listed'}`;}
+function guidePlain(){const c=context(); const rows=selectedRows(); return `ANCHOR POINT RESOURCE GUIDE\nNeed: ${c.need||'Not specified'}\nLocation: ${c.location||'Not specified'}\nPopulation: ${c.population||'Not specified'}\nNotes: ${c.notes||'None'}\n\n${rows.map((r,i)=>resourcePlain(r,i+1)).join('\n\n')}\n\nConfirm audit dates before time-sensitive referrals.`;}
+async function copyText(t){try{await navigator.clipboard.writeText(t); toast('Copied.');}catch(e){toast('Copy failed.');}}
+function copyGuide(){copyText(guidePlain());}
+function printGuide(){const rows=selectedRows(); const c=context(); const html=`<div class="print-head"><div><h1>Anchor Point Resource Guide</h1><p>Generated from approved resource records. Confirm audit dates before time-sensitive referrals.</p></div><p>${new Date().toLocaleDateString()}</p></div><div class="print-meta"><div><b>Need</b><br>${esc(c.need||'Not specified')}</div><div><b>Location</b><br>${esc(c.location||'Not specified')}</div><div><b>Population</b><br>${esc(c.population||'Not specified')}</div><div><b>Notes</b><br>${esc(c.notes||'None')}</div></div><table class="print-table"><thead><tr><th>#</th><th>Resource</th><th>Contact</th><th>Location / Hours</th><th>Service / Notes</th></tr></thead><tbody>${rows.map((r,i)=>`<tr><td>${i+1}</td><td><div class="p-org">${esc(r.organization)}</div><div class="p-service">${esc(r.serviceFunction)}</div><div>${esc(r.urgency)}</div></td><td><b>${esc(r.phoneText||'Not listed')}</b><br>${r.website?`<span class="p-url">${esc(r.website)}</span>`:''}</td><td>${esc(r.location||'Not listed')}<br>${esc(r.hours||'Not listed')}</td><td>${esc(r.descriptionOfServices||'')}<br>${r.notes?`<b>Notes:</b> ${esc(r.notes)}<br>`:''}<span>Audit: ${esc(r.auditDate||'Not listed')}</span></td></tr>`).join('')}</tbody></table>`; $('printArea').innerHTML=html; window.print();}
+load();

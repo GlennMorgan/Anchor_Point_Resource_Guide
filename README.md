@@ -1,3 +1,3 @@
-Anchor Point Resource Portal v1.9
+Anchor Point Resource Portal v1.10
 
-Static GitHub Pages resource portal. Manual searches use strict all-keyword matching. Quoted searches use exact phrase matching.
+Final fit-and-polish pass: tighter Search layout, centered Guide Tray buttons, brighter imagery, and cache-busted assets.

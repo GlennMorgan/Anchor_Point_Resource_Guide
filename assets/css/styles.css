@@ -161,3 +161,36 @@ body[data-page="resources"] .top-actions{white-space:nowrap;}
     grid-template-columns:1fr!important;
   }
 }
+
+/* V1.10 final fit-and-polish refinements */
+.version-pill{display:inline-flex;align-items:center;justify-content:center;margin-left:6px;padding:2px 6px;border-radius:999px;background:rgba(40,240,198,.12);border:1px solid rgba(40,240,198,.28);color:#8ffbea;font-size:10px;letter-spacing:.06em;vertical-align:middle;white-space:nowrap;}
+.hero-img img,.rail-visual img{filter:brightness(1.22) contrast(1.03) saturate(1.14)!important;opacity:1!important;}
+.hero-img:before{background:linear-gradient(90deg,rgba(15,28,51,.72) 0%,rgba(15,28,51,.28) 30%,rgba(15,28,51,.04) 76%,transparent 100%)!important;}
+.rail-visual:after{background:linear-gradient(180deg,rgba(7,17,32,.08),rgba(7,17,32,.52))!important;}
+.drawer-actions .btn,.drawer-actions a.btn,.card-actions .mini-btn,.top-actions .btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.05;}
+.drawer-actions .btn,.drawer-actions a.btn{min-height:38px;white-space:nowrap;}
+body[data-page="resources"] .app{width:100%;max-width:100vw;margin:0;grid-template-columns:220px minmax(0,1fr) 280px!important;gap:10px;padding:8px 12px!important;overflow:hidden;}
+body[data-page="resources"] .app.tray-collapsed{grid-template-columns:220px minmax(0,1fr)!important;padding-right:14px!important;}
+body[data-page="resources"] .main{min-width:0;max-width:100%;overflow:hidden;}
+body[data-page="resources"] .topbar{grid-template-columns:minmax(0,1fr) auto!important;gap:8px;min-width:0;}
+body[data-page="resources"] .command{min-width:0;height:48px;border-radius:14px;}
+body[data-page="resources"] .command input{min-width:0;}
+body[data-page="resources"] .top-actions{display:flex;flex:0 0 auto;gap:6px;min-width:max-content;}
+body[data-page="resources"] .top-actions .btn{min-width:86px;padding:8px 10px;border-radius:11px;white-space:nowrap;}
+body[data-page="resources"] .search-tip{padding:7px 10px;font-size:12px;line-height:1.25;}
+body[data-page="resources"] .panel{padding:10px;overflow:hidden;}
+body[data-page="resources"] .filters{grid-template-columns:minmax(140px,.95fr) minmax(168px,1.25fr) minmax(132px,.8fr) minmax(165px,1fr) minmax(145px,.85fr) auto!important;gap:7px;align-items:end;}
+body[data-page="resources"] .filters .field{min-width:0;}
+body[data-page="resources"] input,body[data-page="resources"] select{min-width:0;min-height:36px;padding:8px 9px;border-radius:10px;}
+body[data-page="resources"] .toolbar{min-width:0;display:flex;flex-wrap:wrap;gap:8px;}
+body[data-page="resources"] .toolbar-actions{min-width:0;}
+body[data-page="resources"] .results{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;width:100%;max-width:100%;overflow:visible!important;}
+body[data-page="resources"] .app.tray-collapsed .results{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+body[data-page="resources"] .resource-card{min-width:0;max-width:100%;overflow:hidden;}
+body[data-page="resources"] .tray{width:100%;max-width:280px;}
+body[data-page="resources"] .floating-show-tray{right:14px;bottom:18px;min-width:130px;}
+.status{min-width:76px!important;max-width:86px!important;padding:4px 6px!important;}
+.status b{font-size:9.8px!important;}.status small{font-size:7.8px!important;}
+@media(min-width:2050px){body[data-page="resources"] .app.tray-collapsed .results{grid-template-columns:repeat(3,minmax(0,1fr))!important;}}
+@media(max-width:1500px){body[data-page="resources"] .app,body[data-page="resources"] .app.tray-collapsed{grid-template-columns:208px minmax(0,1fr)!important;}body[data-page="resources"] .tray{display:none!important;}body[data-page="resources"] .results,body[data-page="resources"] .app.tray-collapsed .results{grid-template-columns:repeat(2,minmax(0,1fr))!important;}body[data-page="resources"] .filters{grid-template-columns:1fr 1fr 1fr!important;}body[data-page="resources"] .filters .btn{grid-column:auto;}}
+@media(max-width:1050px){body[data-page="resources"] .results,body[data-page="resources"] .app.tray-collapsed .results{grid-template-columns:1fr!important;}body[data-page="resources"] .filters{grid-template-columns:1fr 1fr!important;}body[data-page="resources"] .topbar{grid-template-columns:1fr!important;}body[data-page="resources"] .top-actions{justify-content:flex-end;}}

@@ -1,6 +1,6 @@
-const DATA_URL = 'data/resources.json?v=1.9';
-const META_URL = 'data/resources_metadata.json?v=1.9';
-const STORE = 'anchorPoint.selected.v19';
+const DATA_URL = 'data/resources.json?v=1.10';
+const META_URL = 'data/resources_metadata.json?v=1.10';
+const STORE = 'anchorPoint.selected.v110';
 const LEGACY_STORES = [
   'anchorPoint.selected',
   'anchorPoint.selected.v18',
@@ -44,8 +44,8 @@ function clearSelectionStorage(){
 let selected = new Set(readSelectedIds());
 let showingSelectedOnly = false;
 let activeWorkflow = '';
-let viewMode = localStorage.getItem('anchorPoint.viewMode.v19') || 'cards';
-let sortMode = localStorage.getItem('anchorPoint.sortMode.v19') || 'urgency';
+let viewMode = localStorage.getItem('anchorPoint.viewMode.v110') || 'cards';
+let sortMode = localStorage.getItem('anchorPoint.sortMode.v110') || 'urgency';
 const page = document.body.dataset.page || 'home';
 const $ = (id) => document.getElementById(id);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -221,7 +221,7 @@ function setTrayCollapsed(collapsed){
   }else if(floating){
     floating.style.display = 'none';
   }
-  try{ sessionStorage.setItem('anchorPoint.trayCollapsed.v19', collapsed ? '1' : '0'); }catch(e){}
+  try{ sessionStorage.setItem('anchorPoint.trayCollapsed.v110', collapsed ? '1' : '0'); }catch(e){}
 }
 function toggleTrayCollapsed(){
   const app = document.querySelector('.app');
@@ -234,7 +234,7 @@ function wireCommon(){
   const tray=$('guideTray'); if($('trayToggle')) $('trayToggle').addEventListener('click',()=>tray.classList.toggle('open'));
   $$('[id="trayHideBtn"], [id="trayCollapseBtn"]').forEach(b=>b.addEventListener('click', toggleTrayCollapsed));
   try{
-    const storedTray = sessionStorage.getItem('anchorPoint.trayCollapsed.v19');
+    const storedTray = sessionStorage.getItem('anchorPoint.trayCollapsed.v110');
     if(page === 'resources'){
       setTrayCollapsed(storedTray === null ? true : storedTray === '1');
     }else if(storedTray === '1'){
@@ -251,8 +251,8 @@ function initResources(){
   if($('searchForm')) $('searchForm').addEventListener('submit',e=>{e.preventDefault(); activeWorkflow=''; $('keyword').value=$('q').value; renderResults();});
   if($('clearFilters')) $('clearFilters').addEventListener('click',()=>{['keyword','category','urgency','population','location','q'].forEach(id=>{if($(id)) $(id).value='';}); showingSelectedOnly=false; activeWorkflow=''; renderResults();});
   if($('showSelectedBtn')) $('showSelectedBtn').addEventListener('click',()=>{showingSelectedOnly=!showingSelectedOnly; $('showSelectedBtn').textContent=showingSelectedOnly?'Show All':'Show Selected'; renderResults();});
-  if($('viewMode')) $('viewMode').addEventListener('change',e=>{viewMode=e.target.value; localStorage.setItem('anchorPoint.viewMode.v19',viewMode); renderResults();});
-  if($('sortMode')) $('sortMode').addEventListener('change',e=>{sortMode=e.target.value; localStorage.setItem('anchorPoint.sortMode.v19',sortMode); renderResults();});
+  if($('viewMode')) $('viewMode').addEventListener('change',e=>{viewMode=e.target.value; localStorage.setItem('anchorPoint.viewMode.v110',viewMode); renderResults();});
+  if($('sortMode')) $('sortMode').addEventListener('change',e=>{sortMode=e.target.value; localStorage.setItem('anchorPoint.sortMode.v110',sortMode); renderResults();});
   renderResults();
 }
 function getFilters(){return {kw:low($('keyword')?.value||$('q')?.value),cat:txt($('category')?.value),urg:txt($('urgency')?.value),pop:txt($('population')?.value),loc:low($('location')?.value)};}
